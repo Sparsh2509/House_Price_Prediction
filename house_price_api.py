@@ -1,74 +1,94 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, validator
+from datetime import datetime
 import joblib
-import pandas as pd
+
+# Load the trained model
+model = joblib.load('house_price_model_final.joblib')
 
 # Initialize FastAPI app
 app = FastAPI()
 
-# Load trained model
-model = joblib.load('house_price_model_final.joblib')
+# Define the input schema with validations
+class HouseFeatures(BaseModel):
+    area: float = Field(..., ge=100, le=1000, description="Area must be between 100 and 1000")
+    bedrooms: int = Field(..., gt=0, description="Bedrooms must be greater than 0")
+    bathrooms: int = Field(..., gt=0, description="Bathrooms must be greater than 0")
+    floors: int = Field(..., ge=0, description="Floors must be 0 or greater")
+    year_built: int = Field(..., description="Year built must not exceed the current year")
+    garage: str = Field(..., description="Garage must be 'yes' or 'no'")
+    location: str = Field(..., description="Location must be 'suburban', 'downtown', or 'rural'")
+    condition: str = Field(..., description="Condition must be 'excellent', 'good', 'fair', or 'poor'")
 
-# Define input data structure
-class HouseData(BaseModel):
-    Area: float
-    Bedrooms: int
-    Bathrooms: int
-    Floors: int
-    YearBuilt: int
-    Garage: str         # 'Yes' or 'No'
-    Location: str       # 'Downtown', 'Suburban', 'Urban', 'Rural'
-    Condition: str      # 'Excellent', 'Good', 'Average', 'Bad'
+    @validator('year_built')
+    def year_not_in_future(cls, v):
+        current_year = datetime.now().year
+        if v > current_year:
+            raise ValueError(f"Year built cannot exceed {current_year}")
+        return v
 
-# Helper function to encode categorical features
-def encode_features(data: HouseData):
-    # Garage encoding
-    garage_encoded = 1 if data.Garage.lower() == "yes" else 0
+    @validator('garage')
+    def garage_must_be_yes_or_no(cls, v):
+        if v.lower() not in ['yes', 'no']:
+            raise ValueError("Garage must be either 'yes' or 'no'")
+        return v.lower()
 
-    # Location encoding
-    location_mapping = {
-        "downtown": 0,
-        "suburban": 1,
-        "urban": 2,
-        "rural": 3
-    }
-    location_encoded = location_mapping.get(data.Location.lower(), 1)  # Default: Suburban
+    @validator('location')
+    def location_must_be_valid(cls, v):
+        allowed_locations = ['suburban', 'downtown', 'rural']
+        if v.lower() not in allowed_locations:
+            raise ValueError(f"Location must be one of {allowed_locations}")
+        return v.lower()
 
-    # Condition encoding
-    condition_mapping = {
-        "excellent": 0,
-        "good": 1,
-        "average": 2,
-        "bad": 3
-    }
-    condition_encoded = condition_mapping.get(data.Condition.lower(), 2)  # Default: Average
+    @validator('condition')
+    def condition_must_be_valid(cls, v):
+        allowed_conditions = ['excellent', 'good', 'fair', 'poor']
+        if v.lower() not in allowed_conditions:
+            raise ValueError(f"Condition must be one of {allowed_conditions}")
+        return v.lower()
 
-    # Return features in correct order
-    return [
-        data.Area,
-        data.Bedrooms,
-        data.Bathrooms,
-        data.Floors,
-        data.YearBuilt,
+# Define encoding mappings
+garage_mapping = {
+    'no': 0,
+    'yes': 1
+}
+
+location_mapping = {
+    'suburban': 0,
+    'downtown': 1,
+    'rural': 2
+}
+
+condition_mapping = {
+    'excellent': 0,
+    'good': 1,
+    'fair': 2,
+    'poor': 3
+}
+
+# Define the prediction endpoint
+@app.post("/predict")
+def predict_price(features: HouseFeatures):
+    # Map categorical fields
+    garage_encoded = garage_mapping[features.garage]
+    location_encoded = location_mapping[features.location]
+    condition_encoded = condition_mapping[features.condition]
+
+    # Prepare the input in the order model expects
+    input_data = [[
+        features.area,
+        features.bedrooms,
+        features.bathrooms,
+        features.floors,
+        features.year_built,
         garage_encoded,
         location_encoded,
         condition_encoded
-    ]
+    ]]
 
-# Define prediction endpoint
-@app.post("/predict")
-def predict_price(data: HouseData):
-    # Prepare the input data
-    input_features = encode_features(data)
-
-    # Create DataFrame for model
-    input_df = pd.DataFrame([input_features], columns=[
-        'Area', 'Bedrooms', 'Bathrooms', 'Floors', 'YearBuilt', 'Garage', 'Location', 'Condition'
-    ])
-
-    # Make prediction
-    prediction = model.predict(input_df)[0]
+    # Predict
+    prediction = model.predict(input_data)
 
     return {
-        "Predicted House Price": round(prediction, 2)
+        "predicted_price": round(prediction[0], 2)
     }
