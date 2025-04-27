@@ -9,6 +9,11 @@ model = joblib.load('house_price_model_final.joblib')
 # Initialize FastAPI app
 app = FastAPI()
 
+# Root endpoint (for Render health check)
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to the House Price Prediction API!"}
+
 # Define the input schema with validations
 class HouseFeatures(BaseModel):
     area: float = Field(..., ge=100, le=1000, description="Area must be between 100 and 1000")
