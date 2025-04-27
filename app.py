@@ -40,7 +40,7 @@ class HouseFeatures(BaseModel):
 
     @validator('location')
     def location_must_be_valid(cls, v):
-        allowed_locations = ['suburban', 'downtown', 'rural']
+        allowed_locations = ['country side', 'down town', 'city Center', 'suburb']
         if v.lower() not in allowed_locations:
             raise ValueError(f"Location must be one of {allowed_locations}")
         return v.lower()
@@ -59,9 +59,10 @@ garage_mapping = {
 }
 
 location_mapping = {
-    'suburban': 0,
-    'downtown': 1,
-    'rural': 2
+    'country side': 0,
+    'down town': 1,
+    'city Center': 2,
+    'suburb': 3
 }
 
 condition_mapping = {
