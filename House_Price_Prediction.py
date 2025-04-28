@@ -43,7 +43,7 @@ print("R2 Score:", r2_score(y_test, y_pred))
 # Step 7: Save the trained model
 dump(model, 'house_price_model_final.joblib')
 
-print("✅ Model trained and saved successfully!")
+print("Model trained and saved successfully!")
 
 
 

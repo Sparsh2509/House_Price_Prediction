@@ -22,7 +22,7 @@ class HouseFeatures(BaseModel):
     floors: int = Field(..., ge=0, description="Floors must be 0 or greater")
     year_built: int = Field(..., description="Year built must not exceed the current year")
     garage: str = Field(..., description="Garage must be 'yes' or 'no'")
-    location: str = Field(..., description="Location must be 'suburban', 'downtown', or 'rural'")
+    location: str = Field(..., description="Location must be 'country side', 'down town', 'city center', or 'suburb'")
     condition: str = Field(..., description="Condition must be 'excellent', 'good', 'fair', or 'poor'")
 
     @validator('year_built')
@@ -40,7 +40,7 @@ class HouseFeatures(BaseModel):
 
     @validator('location')
     def location_must_be_valid(cls, v):
-        allowed_locations = ['country side', 'down town', 'city Center', 'suburb']
+        allowed_locations = ['country side', 'down town', 'city center', 'suburb']
         if v.lower() not in allowed_locations:
             raise ValueError(f"Location must be one of {allowed_locations}")
         return v.lower()
@@ -61,7 +61,7 @@ garage_mapping = {
 location_mapping = {
     'country side': 0,
     'down town': 1,
-    'city Center': 2,
+    'city center': 2,
     'suburb': 3
 }
 
