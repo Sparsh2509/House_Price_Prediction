@@ -1,11 +1,11 @@
-import streamlit as st
+import streamlit as st 
 import joblib
 import numpy as np
 
 # Load the trained model directly
 model = joblib.load('house_price_model_final.pkl')
 
-st.title("🏠 House Price Prediction App")
+st.title("House Price Prediction App")
 
 # User input fields
 area = st.number_input("Area (sq. ft)", min_value=100, max_value=10000, value=1200)
