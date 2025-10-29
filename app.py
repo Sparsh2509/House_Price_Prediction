@@ -4,7 +4,7 @@ from datetime import datetime
 import joblib
 
 # Load the trained model
-model = joblib.load('house_price_model_final.joblib')
+model = joblib.load('house_price_model_final.pkl')
 
 # Initialize FastAPI app
 app = FastAPI()
