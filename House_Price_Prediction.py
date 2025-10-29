@@ -37,11 +37,11 @@ y_pred = model.predict(X_test)
 
 print("Mean Absolute Error (MAE):", mean_absolute_error(y_test, y_pred))
 print("Mean Squared Error (MSE):", mean_squared_error(y_test, y_pred))
-# print("Root Mean Squared Error (RMSE):", mean_squared_error(y_test, y_pred, squared=False))
+
 print("R2 Score:", r2_score(y_test, y_pred))
 
 # Step 7: Save the trained model
-dump(model, 'house_price_model_final.joblib')
+dump(model, 'house_price_model_final.pkl')
 
 print("Model trained and saved successfully!")
 
