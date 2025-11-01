@@ -27,7 +27,7 @@ if st.button("Predict Price"):
     }
 
     # Call FastAPI
-    url = "https://house-price-env.eba-nimenbn7.ap-south-1.elasticbeanstalk.com/predict"
+    url = "http://house-price-env.eba-nimenbn7.ap-south-1.elasticbeanstalk.com/predict"
     response = requests.post(url, json=payload)
 
     if response.status_code == 200:
