@@ -1,0 +1,2 @@
+Your identification has been saved in C:\Users\harsh\.ssh\aws-eb
+Your public key has been saved in C:\Users\harsh\.ssh\aws-eb.pub

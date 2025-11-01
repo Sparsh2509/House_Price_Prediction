@@ -1,100 +1,90 @@
+# main.py
 from fastapi import FastAPI
 from pydantic import BaseModel, Field, validator
 from datetime import datetime
 import joblib
+import pandas as pd
+import logging
 
-# Load the trained model
-model = joblib.load('house_price_model_final.pkl')
+# ----------------- Logging -----------------
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
 
-# Initialize FastAPI app
+# ----------------- Load Model -----------------
+model = joblib.load("house_price_model_final.pkl")
+
+# ----------------- FastAPI App -----------------
 app = FastAPI()
 
-# Root endpoint (for Render health check)
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the House Price Prediction API!"}
 
-# Define the input schema with validations
+# ----------------- Input Schema -----------------
 class HouseFeatures(BaseModel):
-    area: float = Field(..., ge=100, le=1000, description="Area must be between 100 and 1000")
-    bedrooms: int = Field(..., gt=0, description="Bedrooms must be greater than 0")
-    bathrooms: int = Field(..., gt=0, description="Bathrooms must be greater than 0")
-    floors: int = Field(..., ge=0, description="Floors must be 0 or greater")
-    year_built: int = Field(..., description="Year built must not exceed the current year")
-    garage: str = Field(..., description="Garage must be 'yes' or 'no'")
-    location: str = Field(..., description="Location must be 'country side', 'down town', 'city center', or 'suburb'")
-    condition: str = Field(..., description="Condition must be 'excellent', 'good', 'fair', or 'poor'")
+    area: float = Field(..., ge=100, le=1000)
+    bedrooms: int = Field(..., gt=0)
+    bathrooms: int = Field(..., gt=0)
+    floors: int = Field(..., ge=0)
+    year_built: int
+    garage: str
+    location: str
+    condition: str
 
-    @validator('year_built')
-    def year_not_in_future(cls, v):
+    @validator("year_built")
+    def year_not_future(cls, v):
         current_year = datetime.now().year
         if v > current_year:
             raise ValueError(f"Year built cannot exceed {current_year}")
         return v
 
-    @validator('garage')
-    def garage_must_be_yes_or_no(cls, v):
-        if v.lower() not in ['yes', 'no']:
-            raise ValueError("Garage must be either 'yes' or 'no'")
+    @validator("garage")
+    def garage_valid(cls, v):
+        if v.lower() not in ["yes", "no"]:
+            raise ValueError("Garage must be 'yes' or 'no'")
         return v.lower()
 
-    @validator('location')
-    def location_must_be_valid(cls, v):
-        allowed_locations = ['country side', 'down town', 'city center', 'suburb']
-        if v.lower() not in allowed_locations:
-            raise ValueError(f"Location must be one of {allowed_locations}")
+    @validator("location")
+    def location_valid(cls, v):
+        allowed = ["country side", "down town", "city center", "suburb"]
+        if v.lower() not in allowed:
+            raise ValueError(f"Location must be one of {allowed}")
         return v.lower()
 
-    @validator('condition')
-    def condition_must_be_valid(cls, v):
-        allowed_conditions = ['excellent', 'good', 'fair', 'poor']
-        if v.lower() not in allowed_conditions:
-            raise ValueError(f"Condition must be one of {allowed_conditions}")
+    @validator("condition")
+    def condition_valid(cls, v):
+        allowed = ["excellent", "good", "fair", "poor"]
+        if v.lower() not in allowed:
+            raise ValueError(f"Condition must be one of {allowed}")
         return v.lower()
 
-# Define encoding mappings
-garage_mapping = {
-    'no': 0,
-    'yes': 1
-}
+# ----------------- Mappings -----------------
+garage_mapping = {"no": 0, "yes": 1}
+location_mapping = {"country side": 0, "down town": 1, "city center": 2, "suburb": 3}
+condition_mapping = {"excellent": 0, "good": 1, "fair": 2, "poor": 3}
 
-location_mapping = {
-    'country side': 0,
-    'down town': 1,
-    'city center': 2,
-    'suburb': 3
-}
-
-condition_mapping = {
-    'excellent': 0,
-    'good': 1,
-    'fair': 2,
-    'poor': 3
-}
-
-# Define the prediction endpoint
+# ----------------- Prediction Endpoint -----------------
 @app.post("/predict")
 def predict_price(features: HouseFeatures):
-    # Map categorical fields
-    garage_encoded = garage_mapping[features.garage]
-    location_encoded = location_mapping[features.location]
-    condition_encoded = condition_mapping[features.condition]
-
-    # Prepare the input in the order model expects
-    input_data = [[
+    logger.info(f"Received features: {features.dict()}")
+    
+    # Encode categorical variables
+    data = pd.DataFrame([[
         features.area,
         features.bedrooms,
         features.bathrooms,
         features.floors,
         features.year_built,
-        garage_encoded,
-        location_encoded,
-        condition_encoded
-    ]]
+        garage_mapping[features.garage],
+        location_mapping[features.location],
+        condition_mapping[features.condition]
+    ]], columns=["area","bedrooms","bathrooms","floors","year_built","garage","location","condition"])
 
-    # Predict
-    prediction = model.predict(input_data)
-
-    return {
-        "predicted_price": round(prediction[0], 2)
-    }
+    try:
+        prediction = model.predict(data)
+        predicted_price = round(prediction[0], 2)
+        logger.info(f"Predicted price: {predicted_price}")
+        return {"predicted_price": predicted_price}
+    except Exception as e:
+        logger.error(f"Prediction failed: {e}", exc_info=True)
+        return {"error": "Prediction failed"}
