@@ -4,11 +4,11 @@ import requests
 st.title("House Price Prediction via API")
 
 # Input fields
-area = st.number_input("Area", 100, 1000)
+area = st.number_input("Area", 400, 1000)
 bedrooms = st.number_input("Bedrooms", 1, 10)
 bathrooms = st.number_input("Bathrooms", 1, 10)
 floors = st.number_input("Floors", 0, 5)
-year_built = st.number_input("Year Built", 1900, 2025)
+year_built = st.number_input("Year Built", 2000, 2025)
 garage = st.selectbox("Garage", ["yes", "no"])
 location = st.selectbox("Location", ["country side", "down town", "city center", "suburb"])
 condition = st.selectbox("Condition", ["excellent", "good", "fair", "poor"])
