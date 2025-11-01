@@ -3,10 +3,7 @@ from pydantic import BaseModel, Field, validator
 from datetime import datetime
 import joblib
 import pandas as pd
-import logging
-
-# Setup logging
-logging.basicConfig(level=logging.INFO)
+import traceback
 
 # Load the trained model
 model = joblib.load('house_price_model_final.pkl')
@@ -71,22 +68,27 @@ def predict_price(features: HouseFeatures):
         location_encoded = location_mapping[features.location]
         condition_encoded = condition_mapping[features.condition]
 
-        # Prepare input as DataFrame (keeps feature names)
-        input_data = pd.DataFrame([{
-            "area": features.area,
-            "bedrooms": features.bedrooms,
-            "bathrooms": features.bathrooms,
-            "floors": features.floors,
-            "year_built": features.year_built,
-            "garage": garage_encoded,
-            "location": location_encoded,
-            "condition": condition_encoded
-        }])
+        # Prepare DataFrame with **exact same feature names** as used during training
+        input_df = pd.DataFrame([[
+            features.area,
+            features.bedrooms,
+            features.bathrooms,
+            features.floors,
+            features.year_built,
+            garage_encoded,
+            location_encoded,
+            condition_encoded
+        ]], columns=[
+            'Area', 'Bedrooms', 'Bathrooms', 'Floors', 
+            'Year_built', 'Garage', 'Location', 'Condition'
+        ])
 
         # Predict
-        prediction = model.predict(input_data)
+        prediction = model.predict(input_df)
         return {"predicted_price": round(prediction[0], 2)}
 
     except Exception as e:
-        logging.error(f"Prediction error: {e}")
+        # Log traceback for debugging
+        print("Prediction error:", e)
+        traceback.print_exc()
         return {"error": "Prediction failed"}
