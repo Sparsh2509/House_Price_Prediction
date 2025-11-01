@@ -7,7 +7,6 @@ import traceback
 
 # Load trained model and label encoders
 model = joblib.load('house_price_model_final.pkl')
-label_encoders = joblib.load('label_encoders.pkl')
 
 # Initialize FastAPI
 app = FastAPI()
@@ -55,30 +54,36 @@ class HouseFeatures(BaseModel):
             raise ValueError(f"Condition must be one of {allowed_conditions}")
         return v.lower()
 
+# Define mapping dictionaries
+garage_mapping = {'no': 0, 'yes': 1}
+location_mapping = {'country side': 0, 'down town': 1, 'city center': 2, 'suburb': 3}
+condition_mapping = {'excellent': 0, 'good': 1, 'fair': 2, 'poor': 3}
+
 # Prediction endpoint
 @app.post("/predict")
 def predict_price(features: HouseFeatures):
     try:
-        # Prepare input DataFrame
+        # Map categorical fields
+        garage_encoded = garage_mapping[features.garage]
+        location_encoded = location_mapping[features.location]
+        condition_encoded = condition_mapping[features.condition]
+
+        # Prepare input DataFrame in the exact order and names as training
         input_df = pd.DataFrame([[
             features.area,
             features.bedrooms,
             features.bathrooms,
             features.floors,
             features.year_built,
-            features.garage,
-            features.location,
-            features.condition
+            garage_encoded,
+            location_encoded,
+            condition_encoded
         ]], columns=['Area','Bedrooms','Bathrooms','Floors','YearBuilt','Garage','Location','Condition'])
-
-        # Encode categorical fields using saved LabelEncoders
-        for col in ['Garage','Location','Condition']:
-            input_df[col] = label_encoders[col].transform(input_df[col])
 
         # Predict
         prediction = model.predict(input_df)
 
-        return {"predicted_price": round(prediction[0],2)}
+        return {"predicted_price": round(prediction[0], 2)}
 
     except Exception as e:
         print("Prediction error:", e)

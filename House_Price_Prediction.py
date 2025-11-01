@@ -42,6 +42,5 @@ print("R2 Score:", r2_score(y_test, y_pred))
 
 # Step 8: Save the trained model and label encoders
 dump(model, 'house_price_model_final.pkl')
-dump(label_encoders, 'label_encoders.pkl')
 
-print("Model and encoders saved successfully!")
+print("Model saved successfully!")

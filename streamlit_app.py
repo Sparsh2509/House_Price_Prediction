@@ -1,29 +1,39 @@
-import streamlit as st 
-import joblib
-import numpy as np
+import streamlit as st
+import requests
 
-# Load the trained model directly
-model = joblib.load('house_price_model_final.pkl')
+st.title("House Price Prediction via API")
 
-st.title("House Price Prediction App")
+# Input fields
+area = st.number_input("Area", 100, 1000)
+bedrooms = st.number_input("Bedrooms", 1, 10)
+bathrooms = st.number_input("Bathrooms", 1, 10)
+floors = st.number_input("Floors", 0, 5)
+year_built = st.number_input("Year Built", 1900, 2025)
+garage = st.selectbox("Garage", ["yes", "no"])
+location = st.selectbox("Location", ["country side", "down town", "city center", "suburb"])
+condition = st.selectbox("Condition", ["excellent", "good", "fair", "poor"])
 
-# User input fields
-area = st.number_input("Area (sq. ft)", min_value=100, max_value=10000, value=1200)
-bedrooms = st.number_input("Bedrooms", min_value=1, max_value=10, value=3)
-bathrooms = st.number_input("Bathrooms", min_value=1, max_value=10, value=2)
-floors = st.number_input("Floors", min_value=1, max_value=5, value=1)
-year_built = st.number_input("Year Built", min_value=1900, max_value=2025, value=2010)
-garage = st.selectbox("Garage", ["No", "Yes"])
-location = st.selectbox("Location", ["Downtown", "Suburbs", "Countryside"])
-condition = st.selectbox("Condition", ["Poor", "Average", "Good", "Excellent"])
-
-# Encode categorical fields (same as in training)
-garage_map = {'No': 0, 'Yes': 1}
-location_map = {'Downtown': 0, 'Suburbs': 1, 'Countryside': 2}
-condition_map = {'Poor': 0, 'Average': 1, 'Good': 2, 'Excellent': 3}
-
+# Predict button
 if st.button("Predict Price"):
-    features = np.array([[area, bedrooms, bathrooms, floors, year_built,
-                          garage_map[garage], location_map[location], condition_map[condition]]])
-    prediction = model.predict(features)[0]
-    st.success(f"Predicted House Price: ${prediction:,.2f}")
+    payload = {
+        "area": area,
+        "bedrooms": bedrooms,
+        "bathrooms": bathrooms,
+        "floors": floors,
+        "year_built": year_built,
+        "garage": garage.lower(),  # ensure lowercase
+        "location": location.lower(),
+        "condition": condition.lower()
+    }
+
+    # Call FastAPI
+    url = "https://house-price-env.eba-nimenbn7.ap-south-1.elasticbeanstalk.com/predict"
+    response = requests.post(url, json=payload)
+
+    if response.status_code == 200:
+        if "predicted_price" in response.json():
+            st.success(f"Predicted Price: {response.json()['predicted_price']}")
+        else:
+            st.error(f"Error: {response.json()}")
+    else:
+        st.error(f"Error: {response.json()}")
